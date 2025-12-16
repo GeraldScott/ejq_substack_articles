@@ -9,9 +9,10 @@ If you want to learn more about Quarkus, please visit its website: <https://quar
 
 ## Running the application in dev mode
 
-You can run your application in dev mode that enables live coding using:
+Enable Java 21 in the terminal then run your application in dev mode that enables live coding using:
 
 ```shell script
+sdk use java 21.0.9-tem
 ./mvnw quarkus:dev
 ```
 
@@ -55,6 +56,87 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./target/quarkus-todo-app-1.0.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+
+## CRUD Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant PageResource
+    participant TodoResource
+    participant Todo as Todo Entity
+    participant DB as PostgreSQL
+
+    %% READ - Web UI (List All)
+    rect rgb(200, 230, 200)
+    Note over Browser,DB: READ - List All Todos (Web UI)
+    Browser->>PageResource: GET /page/todos
+    PageResource->>Todo: listAll()
+    Todo->>DB: SELECT * FROM todo
+    DB-->>Todo: Result Set
+    Todo-->>PageResource: List<Todo>
+    PageResource->>PageResource: Render Qute template
+    PageResource-->>Browser: HTML Page
+    end
+
+    %% CREATE - Web UI (Form Submit)
+    rect rgb(200, 200, 230)
+    Note over Browser,DB: CREATE - Add Todo (Web UI Form)
+    Browser->>PageResource: POST /page/todos (title)
+    PageResource->>Todo: new Todo()
+    PageResource->>Todo: persist()
+    Todo->>DB: INSERT INTO todo
+    DB-->>Todo: Generated ID
+    PageResource->>Todo: listAll()
+    Todo->>DB: SELECT * FROM todo
+    DB-->>Todo: Result Set
+    PageResource-->>Browser: Updated HTML Page
+    end
+
+    %% READ - REST API (List All)
+    rect rgb(230, 230, 200)
+    Note over Browser,DB: READ - List All Todos (REST API)
+    Browser->>TodoResource: GET /todos
+    TodoResource->>Todo: listAll()
+    Todo->>DB: SELECT * FROM todo
+    DB-->>Todo: Result Set
+    Todo-->>TodoResource: List<Todo>
+    TodoResource-->>Browser: JSON Array
+    end
+
+    %% CREATE - REST API
+    rect rgb(230, 200, 200)
+    Note over Browser,DB: CREATE - Add Todo (REST API)
+    Browser->>TodoResource: POST /todos (JSON body)
+    TodoResource->>Todo: persist()
+    Todo->>DB: INSERT INTO todo
+    DB-->>Todo: Generated ID
+    TodoResource-->>Browser: 201 Created + JSON
+    end
+
+    %% UPDATE - REST API
+    rect rgb(200, 230, 230)
+    Note over Browser,DB: UPDATE - Modify Todo (REST API)
+    Browser->>TodoResource: PUT /todos/{id} (JSON body)
+    TodoResource->>Todo: findById(id)
+    Todo->>DB: SELECT * FROM todo WHERE id=?
+    DB-->>Todo: Todo Entity
+    TodoResource->>Todo: Update title & completed
+    Todo->>DB: UPDATE todo SET ... WHERE id=?
+    DB-->>Todo: Success
+    TodoResource-->>Browser: Updated JSON
+    end
+
+    %% DELETE - REST API
+    rect rgb(230, 200, 230)
+    Note over Browser,DB: DELETE - Remove Todo (REST API)
+    Browser->>TodoResource: DELETE /todos/{id}
+    TodoResource->>Todo: deleteById(id)
+    Todo->>DB: DELETE FROM todo WHERE id=?
+    DB-->>Todo: Success
+    TodoResource-->>Browser: 204 No Content
+    end
+```
 
 ## Related Guides
 
